@@ -5,6 +5,7 @@ import json
 import os
 
 
+file_path = 'comment_headers.csv'
 
 if(not os.path.isfile('config.json')):
     print("config.json not found, created config.json. Add credentials to file then restart script.")
@@ -36,7 +37,7 @@ reddit = praw.Reddit(
 
 def check_deletion(comment_id):
     comment = reddit.comment(id=comment_id)
-    if(comment.body == "[gelöscht]"):
+    if(comment.body == "[deleted]"):
         return True
     else:
         return False
@@ -53,7 +54,7 @@ def comment_status(comment_id):
     if(author != config['reddit_username']):
         # print("Different user: ", author)
         return "Different user"
-    elif(content == "[gelöscht]"):
+    elif(content == "[deleted]"):
         # print("Already deleted.")
         return "Deleted"
     else:
@@ -71,7 +72,7 @@ def delete_comment(comment_id):
 
     if(author != config['reddit_username']):
         return "Different user"
-    elif(content == "[gelöscht]"):
+    elif(content == "[deleted]"):
         return "Already deleted"
     else:
         comment.delete()
@@ -79,10 +80,10 @@ def delete_comment(comment_id):
         time.sleep(0.12)
         comment = reddit.comment(id=comment_id)
         if(check_deletion(comment_id)):
-            # time.sleep(0.1)
+            # time.sleep(1)
             return "Deletion successful"
         else:
-            # time.sleep(0.1)
+            # time.sleep(1)
             return "Deletion unsuccessful"
 
 
@@ -94,9 +95,7 @@ if __name__ == "__main__":
     
     
     # Read the CSV file
-    file_path = 'comment_headers.csv'
     comment_ids = []
-
     with open(file_path, 'r', encoding='utf-8') as csv_file:
         csv_reader = csv.reader(csv_file)
         next(csv_reader) # Skip header
