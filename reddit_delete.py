@@ -16,7 +16,7 @@ if(not os.path.isfile('config.json')):
     "reddit_username": "",
     "reddit_password": ""
 }""")
-    
+
     exit()
 
 # Load config from json
@@ -33,30 +33,38 @@ reddit = praw.Reddit(
 )
 
 
+def get_comment(comment_id):
+    # Get the comment by its ID
+    comment = reddit.comment(id=comment_id)
+    try:
+        author = comment.author
+        content = comment.body
+    except:
+        return None, None
+    return author, content
+
+
 
 
 def check_deletion(comment_id):
     comment = reddit.comment(id=comment_id)
-    if(comment.body == "[deleted]"):
+    if(comment.body in ["[deleted]", "[removed]"]):
         return True
     else:
         return False
-    
+
 def comment_status(comment_id):
-    # Get the comment by its ID
-    comment = reddit.comment(id=comment_id)
-    try:
-        content = comment.body
-        author = comment.author
-    except:
+    author, body = get_comment(comment_id)
+
+    if(author is None or body is None):
         return "Not found"
 
-    if(author != config['reddit_username']):
-        # print("Different user: ", author)
-        return "Different user"
-    elif(content == "[deleted]"):
+    if(body in ["[deleted]", "[removed]"]):
         # print("Already deleted.")
         return "Deleted"
+    elif(author != config['reddit_username']):
+        # print("Different user: ", author)
+        return "Different user"
     else:
         return "Exists"
 
@@ -65,15 +73,17 @@ def delete_comment(comment_id):
     # Get the comment by its ID
     comment = reddit.comment(id=comment_id)
     try:
-        content = comment.body
+        body = comment.body
         author = comment.author
     except:
         return "Not found"
 
-    if(author != config['reddit_username']):
-        return "Different user"
-    elif(content == "[deleted]"):
+    if(body in ["[deleted]", "[removed]"]):
         return "Already deleted"
+    elif(author != config['reddit_username']):
+        print(f"{author = }")
+        print(f"{body = }")
+        return "Different user"
     else:
         comment.delete()
         check_deletion(comment_id)
@@ -92,8 +102,8 @@ if __name__ == "__main__":
     if(reddit.user.me() == None):
         print("Authentication failed.")
         exit()
-    
-    
+
+
     # Read the CSV file
     comment_ids = []
     with open(file_path, 'r', encoding='utf-8') as csv_file:
@@ -110,16 +120,19 @@ if __name__ == "__main__":
     unsuccessful = 0
     not_found = 0
 
+    deleted_ids = set() # TODO add delted comments to set, and skip if it is in set, save set in json and load set from json
+    comment_ids -= deleted_ids
+
     # Print the number of items to delete
     print(len(comment_ids))
     for i, comment_id in enumerate(comment_ids):
 
-        if(i%10 == 0):
-            print("Total:", i, ";", already_deleted, different_user, successful, unsuccessful, not_found)
+        if(i%50 == 0):
+            print(f"Total: {i}, {already_deleted = }, {different_user = }, {successful = }, {unsuccessful = }, {not_found = }")
 
-        # Delete comment
+        # Try to delete the comment comment
         ret = delete_comment(comment_id)
-        # Check return status
+
         if(ret == "Already deleted"):
             already_deleted += 1
         elif(ret == "Different user"):
@@ -133,13 +146,12 @@ if __name__ == "__main__":
             if(ret2 != "Exists"):
                 successful += 1
                 continue
-            else:
-                unsuccessful += 1
 
             print("Slow retry", comment_id)
             time.sleep(4)
             ret2 = delete_comment(comment_id)
             time.sleep(4)
+            ret2 = comment_status(comment_id)
             if(ret2 != "Exists"):
                 print("retry worked")
                 successful += 1
@@ -149,4 +161,3 @@ if __name__ == "__main__":
 
         elif(ret == "Not found"):
             not_found += 1
-        

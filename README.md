@@ -25,3 +25,6 @@ This script cannot delete any comments not in the GDPR request, if such comments
 10. Rerun the script
 
 
+# Future Features
+1. Keep track of already deleted comments, so that the script can be restarted.
+2. Proper Exception handling, for example if there are too many requests.
